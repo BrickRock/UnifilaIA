@@ -1,8 +1,9 @@
 from fastapi import FastAPI
 import random
-
+from utils import ESTADOS_UNIFILA
 app = FastAPI()
 
+ESTADO = ESTADOS_UNIFILA.CLOSED.value
 
 @app.get("/")
 def read_root():
@@ -18,4 +19,4 @@ def get_status():
     """
         Permite obtener el estado de la unifila 1 = CLOSED, 2= OPEN, 3= HALF-OPEN 
     """
-    return random.randint(1,2,3)
+    return ESTADO
