@@ -1,11 +1,16 @@
 from fastapi import FastAPI, HTTPException
 from sqlalchemy import text
 from utils import ESTADOS_UNIFILA
-from models import RegistrarPacienteRequest
 from database import db
+from router import atencion, pacientes
 
-app = FastAPI()
+app = FastAPI(title="UnifilaIA API")
 
+# Incluir los nuevos routers
+app.include_router(atencion.router)
+app.include_router(pacientes.router)
+
+ESTADO = ESTADOS_UNIFILA.NORMAL.value
 
 @app.get("/health")
 def health_check():
@@ -16,41 +21,10 @@ def health_check():
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"DB no disponible: {e}")
 
-ESTADO = ESTADOS_UNIFILA.NORMAL.value
-
-pacientes_db: list[dict] = []
-
-
 @app.get("/")
 def read_root():
-    return {"Hello": "World"}
-
-
-@app.get("/items/{item_id}")
-def read_item(item_id: int, q: str | None = None):
-    return {"item_id": item_id, "q": q}
-
+    return {"message": "Bienvenido a UnifilaIA API"}
 
 @app.get("/estado_unifila")
 def get_status():
-    """
-    Retorna el estado actual de la unifila: NORMAL, SATURANDOSE o SATURADO.
-    """
     return {"estado": ESTADO}
-
-
-@app.post("/pacientes", status_code=200)
-def registrar_paciente(body: RegistrarPacienteRequest):
-    if ESTADO == ESTADOS_UNIFILA.SATURADO.value:
-        raise HTTPException(status_code=503, detail="Unifila saturada, no se aceptan más pacientes.")
-
-    paciente = {
-        "id": len(pacientes_db) + 1,
-        "nombre": body.nombre,
-        "apellido": body.apellido,
-        "curp": body.curp,
-    }
-    pacientes_db.append(paciente)
-
-    # TODO: persistir con db.get_session() cuando la BD esté levantada
-    return {"mensaje": "Paciente registrado", "paciente": paciente}
