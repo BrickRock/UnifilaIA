@@ -84,6 +84,20 @@ export const api = {
   },
 
   /**
+   * Obtener lista de consultorios con estado de ocupación
+   */
+  async getConsultorios() {
+    try {
+      const response = await fetch(`${PATH}/consultorios`);
+      if (!response.ok) throw new Error("Error al obtener consultorios");
+      return await response.json();
+    } catch (error) {
+      console.error("API Consultorios Error:", error);
+      throw error;
+    }
+  },
+
+  /**
    * Actualizar estado del paciente (Cancelar o Asignar)
    */
   async updatePatientStatus(id, status) {

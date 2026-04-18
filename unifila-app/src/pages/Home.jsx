@@ -1,22 +1,33 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PatientForm from "../components/PatientForm";
 import PatientList from "../components/PatientList";
 import Consultorio from "../components/Consultorio";
+import { api } from "../services/api";
 
 function Home({ patients, addPatient, prioritizePatient, cancelPatient, removePatientFromList }) {
-  const [consultorios, setConsultorios] = useState([null, null]);
+  const [consultoriosMeta, setConsultoriosMeta] = useState([]);
+  const [consultorios, setConsultorios] = useState([]);
+
+  useEffect(() => {
+    api.getConsultorios()
+      .then(data => {
+        setConsultoriosMeta(data);
+        setConsultorios(Array(data.length).fill(null));
+      })
+      .catch(err => console.error("Error cargando consultorios:", err));
+  }, []);
 
   const assignPatient = (patient, index) => {
-    let newConsultorios = [...consultorios];
-    newConsultorios[index] = patient;
-    setConsultorios(newConsultorios);
+    const updated = [...consultorios];
+    updated[index] = patient;
+    setConsultorios(updated);
     removePatientFromList(patient.id);
   };
 
   const clearConsultorio = (index) => {
-    let newConsultorios = [...consultorios];
-    newConsultorios[index] = null;
-    setConsultorios(newConsultorios);
+    const updated = [...consultorios];
+    updated[index] = null;
+    setConsultorios(updated);
   };
 //C:\Users\matba\Downloads\ProyectoUNIFILA\unifila-app\src\components\Consultorio.jsx
   return (
@@ -64,19 +75,21 @@ function Home({ patients, addPatient, prioritizePatient, cancelPatient, removePa
 
             <div className="card">
               <h2><span>🕒</span> Central de Espera</h2>
-              <PatientList 
-                patients={patients} 
-                assignPatient={assignPatient} 
+              <PatientList
+                patients={patients}
+                assignPatient={assignPatient}
                 prioritizePatient={prioritizePatient}
                 cancelPatient={cancelPatient}
+                numConsultorios={consultoriosMeta.length}
               />
             </div>
           </section>
 
           <section className="dashboard-right">
             <div className="card" style={{ height: 'calc(100% - 3rem)' }}>
-              <Consultorio 
-                consultorios={consultorios} 
+              <Consultorio
+                consultorios={consultorios}
+                meta={consultoriosMeta}
                 clearConsultorio={clearConsultorio}
               />
             </div>

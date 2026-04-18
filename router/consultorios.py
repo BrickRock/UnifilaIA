@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from database import db
-from models import Consultorio, PacienteFormado
+from models import Consultorio, PacienteFormado, EstadoAtencion
 from schemas import AsignarConsultorioRequest
 
 router = APIRouter(prefix="/consultorios", tags=["Consultorios"])
@@ -18,9 +18,16 @@ def get_db():
 
 @router.get("", status_code=200)
 def listar_consultorios(session: Session = Depends(get_db)):
-    consultorios = session.query(Consultorio).all()
+    consultorios = session.query(Consultorio).order_by(Consultorio.numero).all()
     return [
-        {"id_consultorio": c.id_consultorio, "numero": c.numero, "piso": c.piso}
+        {
+            "id_consultorio": c.id_consultorio,
+            "numero": c.numero,
+            "piso": c.piso,
+            "ocupado": any(
+                t.estado_atencion == EstadoAtencion.EN_ATENCION for t in c.turnos
+            ),
+        }
         for c in consultorios
     ]
 

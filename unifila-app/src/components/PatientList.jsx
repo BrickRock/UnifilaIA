@@ -1,4 +1,4 @@
-function PatientList({ patients, assignPatient, prioritizePatient, cancelPatient }) {
+function PatientList({ patients, assignPatient, prioritizePatient, cancelPatient, numConsultorios = 2 }) {
   const handlePrioritize = (patient) => {
     if (window.confirm(`¿Está seguro de que desea priorizar a ${patient.name}? Esto lo moverá al inicio de la lista.`)) {
       prioritizePatient(patient.id);
@@ -38,20 +38,16 @@ function PatientList({ patients, assignPatient, prioritizePatient, cancelPatient
               </button>
             )}
 
-            <button 
-              className="btn-outline" 
-              onClick={() => assignPatient(p, 0)}
-              title="Asignar a Consultorio 1"
-            >
-              C1
-            </button>
-            <button 
-              className="btn-outline" 
-              onClick={() => assignPatient(p, 1)}
-              title="Asignar a Consultorio 2"
-            >
-              C2
-            </button>
+            {Array.from({ length: numConsultorios }, (_, i) => (
+              <button
+                key={i}
+                className="btn-outline"
+                onClick={() => assignPatient(p, i)}
+                title={`Asignar a Consultorio ${i + 1}`}
+              >
+                C{i + 1}
+              </button>
+            ))}
             <button 
               className="btn-outline" 
               onClick={() => cancelPatient(p.id)}

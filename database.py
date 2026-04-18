@@ -24,6 +24,15 @@ class _Database:
                     "ADD COLUMN IF NOT EXISTS nss VARCHAR(11)"
                 ))
                 conn.commit()
+            # Seed consultorios si la tabla está vacía
+            with cls._instance._engine.connect() as conn2:
+                count = conn2.execute(text("SELECT COUNT(*) FROM consultorio")).scalar() or 0
+                if count == 0:
+                    conn2.execute(text(
+                        "INSERT INTO consultorio (numero, piso) VALUES "
+                        "('101', 1), ('102', 1), ('201', 2)"
+                    ))
+                    conn2.commit()
             cls._instance._session_factory = sessionmaker(bind=cls._instance._engine)
         return cls._instance
 
