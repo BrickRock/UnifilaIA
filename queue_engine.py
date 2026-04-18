@@ -1,6 +1,6 @@
 import os
 import joblib
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func, select
@@ -81,7 +81,7 @@ class QueueEngine:
         suma_tiempos_anteriores debe capturarse ANTES de insertar al nuevo paciente.
         """
         tiempo_ajustado = max(0.0, suma_tiempos_anteriores - cls.BUFFER_MINUTOS)
-        hora_sugerida   = datetime.now() + timedelta(minutes=tiempo_ajustado)
+        hora_sugerida   = datetime.now(timezone.utc) + timedelta(minutes=tiempo_ajustado)
         return {
             "suma_tiempos_anteriores_min": round(suma_tiempos_anteriores, 1),
             "buffer_aplicado_min":         cls.BUFFER_MINUTOS,
