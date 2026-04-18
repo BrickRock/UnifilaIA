@@ -54,7 +54,7 @@ export const Topbar: React.FC<TopbarProps> = ({ page, setPage, user, logout, the
 
           {user ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginLeft: '8px' }}>
-              <div style={{ textAlign: 'right', display: 'none', md: 'block' }}>
+              <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: '13px', fontWeight: '600' }}>{user.name.split(' ')[0]}</div>
               </div>
               <button 
