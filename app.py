@@ -5,9 +5,15 @@ from utils import ESTADOS_UNIFILA
 from models import Paciente, PacienteFormado
 from schemas import PacienteCreate, PacienteFormadoCreate
 from database import db
+from router import atencion, pacientes
 
-app = FastAPI()
+app = FastAPI(title="UnifilaIA API")
 
+# Incluir los nuevos routers
+app.include_router(atencion.router)
+app.include_router(pacientes.router)
+
+ESTADO = ESTADOS_UNIFILA.NORMAL.value
 
 @app.get("/health")
 def health_check():
@@ -22,13 +28,7 @@ ESTADO = ESTADOS_UNIFILA.NORMAL.value
 
 @app.get("/")
 def read_root():
-    return {"Hello": "World"}
-
-
-@app.get("/items/{item_id}")
-def read_item(item_id: int, q: str | None = None):
-    return {"item_id": item_id, "q": q}
-
+    return {"message": "Bienvenido a UnifilaIA API"}
 
 @app.get("/estado_unifila")
 def get_status():
