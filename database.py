@@ -1,11 +1,11 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
-
+from models import Base
 # TODO: reemplazar con la cadena real cuando la BD esté levantada
 # Formato PostgreSQL: "postgresql+psycopg2://user:password@host:port/dbname"
-DATABASE_URL = "postgresql+psycopg2://user:password@localhost:5432/unifila"
-
-
+DATABASE_URL = "postgresql+psycopg2://Seguro13X:mysecretpassword@172.17.0.3:5432/imss"
+#
+#POSTGRES_PASSWORD=mysecretpassword -e POSTGRES_USER=Seguro13X
 class _Database:
     _instance: "_Database | None" = None
 
@@ -13,6 +13,7 @@ class _Database:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance._engine = create_engine(DATABASE_URL, echo=True)
+            Base.metadata.create_all(cls._instance._engine)
             cls._instance._session_factory = sessionmaker(bind=cls._instance._engine)
         return cls._instance
 
