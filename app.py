@@ -1,17 +1,28 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from utils import ESTADOS_UNIFILA
 from models import Paciente, PacienteFormado
 from schemas import PacienteCreate, PacienteFormadoCreate
 from database import db
-from router import atencion, pacientes
+from router import atencion, pacientes, auth
 
 app = FastAPI(title="UnifilaIA API")
+
+# Configuración de CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Incluir los nuevos routers
 app.include_router(atencion.router)
 app.include_router(pacientes.router)
+app.include_router(auth.router)
 
 ESTADO = ESTADOS_UNIFILA.NORMAL.value
 
