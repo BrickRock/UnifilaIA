@@ -1,10 +1,9 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
+from typing import List
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 from models import PacienteFormado, EstadoAtencion, Paciente, RegistroPresencialRequest
 from database import db
-from typing import List
-from datetime import date, datetime
 
 class QueueService:
     @staticmethod

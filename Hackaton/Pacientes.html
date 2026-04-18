@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MediCita — Acceso Paciente</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#0D1117;--ink2:#3D4450;--ink3:#8A919E;
+  --page:#F5F3EE;--white:#FFFFFF;
+  --green:#0C6E50;--green2:#138A65;--green3:#1AAD7E;
+  --green-lt:#E4F5EE;--green-md:#B0E2CE;
+  --red:#C0392B;--red-lt:#FDEEEC;
+  --amber:#B45309;--amber-lt:#FEF3C7;
+  --blue:#1D4ED8;--blue-lt:#EFF6FF;
+  --border:#E2DDD5;--border2:#CAC4BA;
+  --r:14px;--r-sm:9px;--r-lg:20px;
+  --shadow:0 2px 8px rgba(0,0,0,.07),0 1px 2px rgba(0,0,0,.05);
+  --shadow-lg:0 12px 40px rgba(0,0,0,.13);
+}
+body{font-family:'Instrument Sans',sans-serif;background:var(--page);color:var(--ink);min-height:100vh;font-size:15px;line-height:1.6}
+h1,h2,h3,h4{font-family:'Syne',sans-serif;line-height:1.15}
+.app-shell{display:flex;flex-direction:column;min-height:100vh}
+
+/* TOPBAR */
+.topbar{background:var(--white);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200}
+.topbar-inner{max-width:1120px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:62px}
+.logo{font-family:'Syne',sans-serif;font-size:19px;font-weight:700;color:var(--green);display:flex;align-items:center;gap:8px;cursor:pointer;border:none;background:none}
+.logo-mark{width:28px;height:28px;background:var(--green);border-radius:8px;display:flex;align-items:center;justify-content:center}
+.nav-pills{display:flex;gap:2px}
+.nav-pill{background:none;border:none;padding:7px 14px;border-radius:var(--r-sm);font-family:'Instrument Sans',sans-serif;font-size:13.5px;font-weight:500;color:var(--ink3);cursor:pointer;transition:all .14s}
+.nav-pill:hover{background:var(--page);color:var(--ink)}
+.nav-pill.on{background:var(--green-lt);color:var(--green);font-weight:600}
+.user-chip{display:flex;align-items:center;gap:8px;background:var(--page);border:1px solid var(--border);border-radius:99px;padding:5px 14px 5px 6px;font-size:13px;font-weight:600;color:var(--ink2)}
+.ava{width:26px;height:26px;border-radius:50%;background:var(--green);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.btn-logout{background:none;border:1px solid var(--border);border-radius:var(--r-sm);padding:6px 14px;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:500;color:var(--ink3);cursor:pointer;transition:all .14s}
+.btn-logout:hover{border-color:var(--red);color:var(--red)}
+
+main{flex:1;max-width:1120px;margin:0 auto;width:100%;padding:40px 28px 80px}
+
+/* AUTH */
+.auth-wrap{min-height:100vh;display:grid;grid-template-columns:1fr 1fr}
+.auth-left{background:var(--green);padding:56px 52px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden}
+.auth-left::before{content:'';position:absolute;top:-80px;right:-80px;width:320px;height:320px;border-radius:50%;background:rgba(255,255,255,.06)}
+.auth-left::after{content:'';position:absolute;bottom:-60px;left:-40px;width:240px;height:240px;border-radius:50%;background:rgba(255,255,255,.04)}
+.auth-brand{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:#fff;display:flex;align-items:center;gap:10px}
+.auth-brand-mark{width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center}
+.auth-tagline{color:#fff;position:relative;z-index:1}
+.auth-tagline h1{font-size:38px;font-weight:700;margin-bottom:16px;line-height:1.1}
+.auth-tagline p{font-size:15px;opacity:.72;max-width:320px;line-height:1.7}
+.auth-right{background:var(--page);display:flex;align-items:center;justify-content:center;padding:48px 40px}
+.auth-box{width:100%;max-width:400px}
+.auth-box h2{font-size:26px;font-weight:700;margin-bottom:6px;color:var(--ink)}
+.auth-sub{color:var(--ink3);font-size:14px;margin-bottom:28px}
+@media(max-width:720px){.auth-wrap{grid-template-columns:1fr}.auth-left{display:none}.auth-right{padding:32px 24px}}
+
+/* FORMS */
+.fg{margin-bottom:16px}
+.fg label{display:block;font-size:12.5px;font-weight:600;color:var(--ink2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+.fg input,.fg select,.fg textarea{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-family:'Instrument Sans',sans-serif;font-size:14.5px;color:var(--ink);background:var(--white);outline:none;transition:border .14s}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--green3)}
+.curp-input{font-family:'Syne',sans-serif!important;font-size:18px!important;letter-spacing:2px!important;text-transform:uppercase!important;text-align:center}
+.hint{font-size:11.5px;color:var(--ink3);margin-top:4px}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 22px;border-radius:var(--r-sm);border:none;font-family:'Instrument Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .14s;white-space:nowrap}
+.btn-primary{background:var(--green);color:#fff;width:100%}
+.btn-primary:hover{background:var(--green2)}
+.btn-primary:active{transform:scale(.98)}
+.btn-primary:disabled{opacity:.55;cursor:not-allowed}
+.btn-ghost{background:transparent;border:1.5px solid var(--border);color:var(--ink2)}
+.btn-ghost:hover{border-color:var(--border2);color:var(--ink)}
+.btn-sm{padding:7px 14px;font-size:13px}
+.btn-danger-soft{background:var(--red-lt);color:var(--red);border:none}
+.btn-danger-soft:hover{background:#f8d5d1}
+.link-btn{background:none;border:none;color:var(--green);font-family:'Instrument Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+
+/* ALERTS */
+.alert{padding:11px 15px;border-radius:var(--r-sm);font-size:13.5px;margin-bottom:14px;display:flex;align-items:flex-start;gap:8px}
+.alert-err{background:var(--red-lt);color:var(--red);border:1px solid #f0c4bf}
+.alert-ok{background:var(--green-lt);color:var(--green);border:1px solid var(--green-md)}
+.alert-info{background:var(--blue-lt);color:var(--blue);border:1px solid #bfdbfe}
+.alert-warn{background:var(--amber-lt);color:var(--amber);border:1px solid #fde68a}
+
+/* CARD */
+.card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:26px;box-shadow:var(--shadow)}
+
+/* GRID */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+@media(max-width:680px){.g2,.g3{grid-template-columns:1fr}}
+
+/* SECTION */
+.sec-hd{margin-bottom:26px}
+.sec-hd h2{font-size:26px;font-weight:700;color:var(--ink);margin-bottom:4px}
+.sec-hd p{color:var(--ink3);font-size:14.5px}
+.divider{height:1px;background:var(--border);margin:18px 0}
+
+/* BADGE */
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:600}
+.badge-ok{background:var(--green-lt);color:var(--green)}
+.badge-pend{background:var(--amber-lt);color:var(--amber)}
+.badge-cancel{background:var(--red-lt);color:var(--red)}
+.badge-ahead{background:var(--blue-lt);color:var(--blue)}
+.badge-dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+
+/* APPT CARD */
+.ac{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;display:grid;grid-template-columns:5px 1fr auto;gap:0 14px;align-items:center;box-shadow:var(--shadow);margin-bottom:12px}
+.ac-stripe{border-radius:4px;align-self:stretch}
+.s-ok{background:var(--green)}
+.s-pend{background:var(--amber)}
+.s-cancel{background:var(--red)}
+.s-ahead{background:var(--blue)}
+.ac-info h3{font-family:'Instrument Sans',sans-serif;font-size:15px;font-weight:600;margin-bottom:4px}
+.ac-meta{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--ink3);margin-top:5px}
+
+/* SLOT GRID */
+.avail-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:10px;margin-top:14px}
+.slot{border:1.5px solid var(--border);border-radius:var(--r-sm);padding:10px 8px;text-align:center;cursor:pointer;transition:all .14s;background:var(--white)}
+.slot.free{border-color:var(--green-md);background:var(--green-lt)}
+.slot.free:hover{border-color:var(--green);background:#d2f0e4;transform:translateY(-2px)}
+.slot.free.sel{border-color:var(--green);background:var(--green);color:#fff}
+.slot.busy{border-color:var(--border);background:var(--page);cursor:not-allowed;opacity:.45}
+.slot-time{font-family:'Syne',sans-serif;font-size:14px;font-weight:700}
+.slot-lbl{font-size:11px;margin-top:2px}
+
+/* TABS */
+.tabs{display:flex;gap:2px;border-bottom:1.5px solid var(--border);margin-bottom:24px}
+.tab{padding:9px 16px;background:none;border:none;font-family:'Instrument Sans',sans-serif;font-size:13.5px;font-weight:500;color:var(--ink3);cursor:pointer;border-bottom:2.5px solid transparent;margin-bottom:-1.5px;transition:all .14s}
+.tab.on{color:var(--green);border-bottom-color:var(--green);font-weight:600}
+.tab:hover:not(.on){color:var(--ink)}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border-radius:var(--r);overflow:hidden;border:1px solid var(--border);margin-bottom:32px}
+.stat{background:var(--white);padding:18px;text-align:center}
+.stat-n{font-family:'Syne',sans-serif;font-size:28px;font-weight:700;color:var(--green)}
+.stat-l{font-size:11.5px;color:var(--ink3);margin-top:2px}
+@media(max-width:640px){.stats{grid-template-columns:1fr 1fr}}
+
+/* BRANCH CARD */
+.branch-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow)}
+.branch-top{height:90px;display:flex;align-items:center;justify-content:center;font-size:32px;background:linear-gradient(135deg,var(--green-lt) 0%,#c8edd9 100%)}
+.branch-body{padding:14px 18px}
+.branch-body h3{font-family:'Instrument Sans',sans-serif;font-size:14px;font-weight:700;margin-bottom:4px}
+.branch-meta{font-size:12.5px;color:var(--ink3);line-height:1.75}
+
+/* QR */
+.qr-wrap{display:flex;flex-direction:column;align-items:center;gap:18px}
+#qrdiv{padding:14px;background:#fff;border-radius:12px;border:2px solid var(--green-lt)}
+.qr-chip{background:var(--green-lt);border-radius:10px;padding:12px 22px;text-align:center;width:100%}
+.qr-chip-name{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;color:var(--green)}
+.qr-chip-sub{font-size:12.5px;color:var(--green2);margin-top:2px}
+
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(13,17,23,.5);display:flex;align-items:center;justify-content:center;z-index:300;padding:20px}
+.modal{background:var(--white);border-radius:var(--r-lg);padding:32px;width:100%;max-width:540px;box-shadow:var(--shadow-lg);max-height:92vh;overflow-y:auto}
+.modal h2{font-size:21px;font-weight:700;margin-bottom:4px}
+.modal-sub{color:var(--ink3);font-size:13.5px;margin-bottom:22px}
+
+/* LOADING */
+.loading-dots{display:flex;gap:5px;justify-content:center;padding:24px}
+.loading-dots span{width:7px;height:7px;border-radius:50%;background:var(--green);animation:bnc .8s infinite}
+.loading-dots span:nth-child(2){animation-delay:.15s}
+.loading-dots span:nth-child(3){animation-delay:.3s}
+@keyframes bnc{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+
+/* EMPTY */
+.empty{text-align:center;padding:48px 24px;color:var(--ink3)}
+.empty-ico{font-size:38px;margin-bottom:12px}
+.empty h3{font-family:'Instrument Sans',sans-serif;font-size:15px;font-weight:600;color:var(--ink);margin-bottom:5px}
+
+/* HERO */
+.hero{background:linear-gradient(135deg,#0a5940 0%,var(--green) 55%,var(--green2) 100%);border-radius:var(--r-lg);padding:52px 48px;color:#fff;margin-bottom:36px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-70px;right:-70px;width:300px;height:300px;border-radius:50%;background:rgba(255,255,255,.06)}
+.hero h1{font-size:34px;font-weight:700;margin-bottom:10px;line-height:1.12}
+.hero p{opacity:.78;font-size:15px;max-width:440px;margin-bottom:26px}
+.hero-btns{display:flex;gap:10px;flex-wrap:wrap}
+.hbtn-p{background:#fff;color:var(--green);border:none;padding:11px 26px;border-radius:var(--r-sm);font-family:'Instrument Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:opacity .14s}
+.hbtn-p:hover{opacity:.88}
+.hbtn-g{background:transparent;border:1.5px solid rgba(255,255,255,.38);color:#fff;padding:11px 26px;border-radius:var(--r-sm);font-family:'Instrument Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:border-color .14s}
+.hbtn-g:hover{border-color:rgba(255,255,255,.75)}
+
+/* NEXT DAY */
+.ndbox{background:var(--amber-lt);border:1.5px solid #fde68a;border-radius:var(--r-sm);padding:14px 18px;margin-bottom:14px;font-size:13.5px;color:var(--amber);line-height:1.6}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const {useState,useEffect,useRef,useCallback}=React;
+const h=React.createElement;
+
+/* ── DATA ── */
+const BRANCHES=[
+  {id:1,name:'Sucursal Centro',addr:'Av. Hidalgo 304, Centro',phone:'449-123-4567',docs:12,emoji:'🏥',svcs:'Consulta general · Cardiología · Ginecología'},
+  {id:2,name:'Sucursal Norte',addr:'Blvd. L.D. Colosio 1200',phone:'449-987-6543',docs:8,emoji:'🏨',svcs:'Pediatría · Traumatología · Radiología'},
+  {id:3,name:'Sucursal Sur',addr:'Av. Aguascalientes Sur 502',phone:'449-456-7890',docs:10,emoji:'🏩',svcs:'Neurología · Dermatología · Urgencias 24h'},
+  {id:4,name:'Sucursal Oriente',addr:'C. Venustiano Carranza 88',phone:'449-321-0987',docs:6,emoji:'🏪',svcs:'Medicina general · Oftalmología · Laboratorio'},
+  {id:5,name:'Sucursal Pátzcuaro',addr:'Calle Real 15, Las Flores',phone:'449-654-3210',docs:7,emoji:'🏦',svcs:'Consulta general · Ultrasonido · Nutrición'},
+  {id:6,name:'Sucursal Ojocaliente',addr:'Carretera 45 Km 12',phone:'449-111-2233',docs:5,emoji:'🏢',svcs:'Medicina familiar · Ginecología · Rayos X'},
+];
+const SPECS=['Medicina general','Cardiología','Pediatría','Ginecología','Traumatología','Neurología','Dermatología','Oftalmología','Nutrición'];
+const HOURS=['07:00','07:30','08:00','08:30','09:00','09:30','10:00','10:30','11:00','11:30','12:00','12:30','13:00','13:30','14:00','14:30','15:00','15:30','16:00','16:30','17:00','17:30','18:00'];
+const CONSULT=['101','102','203','204','301','305','402'];
+
+/* ── JWT ── */
+function makeJWT(payload){
+  const a=btoa(JSON.stringify({alg:'HS256',typ:'JWT'}));
+  const b=btoa(JSON.stringify(payload));
+  const c=btoa('mc-'+payload.curp);
+  return a+'.'+b+'.'+c;
+}
+function readJWT(tok){try{return JSON.parse(atob(tok.split('.')[1]));}catch{return null;}}
+
+/* ── MOCK AVAILABILITY ──
+   Genera slots pseudo-aleatorios deterministas por fecha+sucursal.
+   En producción esto sería un WebSocket o polling a tu API. */
+function getSlots(dateStr,branchId){
+  const seed=parseInt(dateStr.replace(/-/g,''))+branchId*31;
+  const rng=n=>((Math.sin(seed+n*7.3)*43758.5453)%1+1)%1;
+  return HOURS.map((t,i)=>{
+    const busy=rng(i)<0.40;
+    const con=CONSULT[Math.floor(rng(i+50)*CONSULT.length)];
+    return {time:t,consultory:con,busy};
+  });
+}
+function nextFreeDay(fromDate,branchId){
+  for(let d=1;d<=14;d++){
+    const dt=new Date(fromDate);dt.setDate(dt.getDate()+d);
+    const ds=dt.toISOString().split('T')[0];
+    const s=getSlots(ds,branchId);
+    if(s.some(x=>!x.busy))return{date:ds,slots:s};
+  }
+  return null;
+}
+
+/* ── STATUS MAP ── */
+const ST={
+  confirmed:{label:'Confirmada',cls:'badge-ok',stripe:'s-ok'},
+  pending:{label:'Pendiente',cls:'badge-pend',stripe:'s-pend'},
+  cancelled:{label:'Cancelada',cls:'badge-cancel',stripe:'s-cancel'},
+  delayed:{label:'Adelantada',cls:'badge-ahead',stripe:'s-ahead'},
+};
+
+function demoAppts(){
+  return [
+    {id:1,spec:'Cardiología',date:'2025-06-10',time:'10:00',consultory:'204',status:'confirmed',branch:'Sucursal Centro',note:''},
+    {id:2,spec:'Pediatría',date:'2025-06-15',time:'09:00',consultory:'101',status:'delayed',branch:'Sucursal Norte',note:'Se adelantó de las 09:30'},
+    {id:3,spec:'Dermatología',date:'2025-05-28',time:'11:00',consultory:'305',status:'cancelled',branch:'Sucursal Sur',note:'Médico canceló por emergencia'},
+  ];
+}
+
+/* ── TOPBAR ── */
+function Topbar({page,setPage,user,logout}){
+  return h('div',{className:'topbar'},
+    h('div',{className:'topbar-inner'},
+      h('button',{className:'logo',onClick:()=>setPage(user?'home':'login')},
+        h('div',{className:'logo-mark'},
+          h('svg',{viewBox:'0 0 20 20',width:16,height:16,fill:'none',stroke:'#fff',strokeWidth:2.5,strokeLinecap:'round'},
+            h('path',{d:'M10 4v12M6 8l4-4 4 4'})
+          )
+        ),
+        'MediCita'
+      ),
+      user && h('div',{className:'nav-pills'},
+        h('button',{className:'nav-pill'+(page==='home'?' on':''),onClick:()=>setPage('home')},'Inicio'),
+        h('button',{className:'nav-pill'+(page==='appts'?' on':''),onClick:()=>setPage('appts')},'Mis Citas'),
+        h('button',{className:'nav-pill'+(page==='qr'?' on':''),onClick:()=>setPage('qr')},'📱 QR'),
+        h('button',{className:'nav-pill'+(page==='branches'?' on':''),onClick:()=>setPage('branches')},'Sucursales'),
+      ),
+      user
+        ? h('div',{style:{display:'flex',alignItems:'center',gap:10}},
+            h('div',{className:'user-chip'},
+              h('div',{className:'ava'},user.name[0].toUpperCase()),
+              user.name.split(' ')[0]
+            ),
+            h('button',{className:'btn-logout',onClick:logout},'Salir')
+          )
+        : h('div',{style:{display:'flex',gap:6}},
+            h('button',{className:'nav-pill'+(page==='login'?' on':''),onClick:()=>setPage('login')},'Iniciar sesión'),
+            h('button',{className:'nav-pill'+(page==='register'?' on':''),onClick:()=>setPage('register')},'Registrarse'),
+          )
+    )
+  );
+}
+
+/* ── LOGIN ── */
+function LoginPage({setUser,setPage}){
+  const [curp,setCurp]=useState('');
+  const [err,setErr]=useState('');
+  const [loading,setLoading]=useState(false);
+  const isQR=typeof window!=='undefined'&&window.location.search.includes('qr=1');
+
+  const submit=()=>{
+    const val=curp.trim().toUpperCase();
+    if(val.length<10)return setErr('Ingresa tu CURP completa (18 caracteres).');
+    setErr('');setLoading(true);
+    setTimeout(()=>{
+      const users=JSON.parse(localStorage.getItem('mc_users')||'[]');
+      const found=users.find(u=>u.curp===val);
+      if(!found){setLoading(false);return setErr('CURP no registrada. Crea tu cuenta primero.');}
+      const tok=makeJWT({curp:found.curp,name:found.name,email:found.email,exp:Date.now()+86400000*7});
+      localStorage.setItem('mc_token',tok);
+      setUser(found);setPage('home');
+    },700);
+  };
+
+  return h('div',{className:'auth-wrap'},
+    h('div',{className:'auth-left'},
+      h('div',{className:'auth-brand'},
+        h('div',{className:'auth-brand-mark'},
+          h('svg',{viewBox:'0 0 20 20',width:18,height:18,fill:'none',stroke:'#fff',strokeWidth:2.5,strokeLinecap:'round'},
+            h('path',{d:'M10 4v12M6 8l4-4 4 4'})
+          )
+        ),
+        'MediCita'
+      ),
+      h('div',{className:'auth-tagline'},
+        h('h1',null,'Tu salud,\nuna sola\nclave.'),
+        h('p',null,'Accede con tu CURP. Sin contraseñas, sin formularios largos. Tu identidad es suficiente.')
+      ),
+      h('div',{style:{color:'rgba(255,255,255,.45)',fontSize:12}},'Centro Médico Integral · Aguascalientes')
+    ),
+    h('div',{className:'auth-right'},
+      h('div',{className:'auth-box'},
+        isQR && h('div',{className:'alert alert-info',style:{marginBottom:18}},
+          '📱 Llegaste desde un código QR — ingresa tu CURP para continuar.'
+        ),
+        h('h2',null,'Iniciar sesión'),
+        h('p',{className:'auth-sub'},'Ingresa tu CURP para acceder a tu cuenta'),
+        err && h('div',{className:'alert alert-err'},err),
+        h('div',{className:'fg'},
+          h('label',null,'CURP'),
+          h('input',{
+            className:'curp-input',
+            maxLength:18,
+            placeholder:'AAAA######HHHHXX##',
+            value:curp,
+            onChange:ev=>setCurp(ev.target.value.toUpperCase()),
+            onKeyDown:ev=>ev.key==='Enter'&&submit()
+          }),
+          h('p',{className:'hint'},'Clave Única de Registro de Población · 18 caracteres')
+        ),
+        h('button',{className:'btn btn-primary',onClick:submit,disabled:loading},
+          loading?'Verificando…':'Entrar con CURP →'
+        ),
+        h('div',{className:'divider'}),
+        h('p',{style:{textAlign:'center',fontSize:14,color:'var(--ink3)'}},
+          '¿No tienes cuenta? ',
+          h('button',{className:'link-btn',onClick:()=>setPage('register')},'Regístrate aquí')
+        )
+      )
+    )
+  );
+}
+
+/* ── REGISTER ── */
+function RegisterPage({setPage}){
+  const [f,setF]=useState({name:'',ap1:'',ap2:'',curp:'',phone:'',email:'',branch:BRANCHES[0].name});
+  const [err,setErr]=useState('');
+  const [ok,setOk]=useState(false);
+  const upd=k=>ev=>setF({...f,[k]:ev.target.value});
+
+  const submit=()=>{
+    if(!f.name||!f.ap1||!f.curp||!f.phone||!f.email)return setErr('Todos los campos marcados son obligatorios.');
+    const curp=f.curp.trim().toUpperCase();
+    if(curp.length!==18)return setErr('La CURP debe tener exactamente 18 caracteres.');
+    const users=JSON.parse(localStorage.getItem('mc_users')||'[]');
+    if(users.find(u=>u.curp===curp))return setErr('Esta CURP ya está registrada. Inicia sesión.');
+    const nu={name:[f.name,f.ap1,f.ap2].filter(Boolean).join(' '),curp,phone:f.phone,email:f.email,branch:f.branch};
+    users.push(nu);
+    localStorage.setItem('mc_users',JSON.stringify(users));
+    localStorage.setItem('mc_appts_'+curp,JSON.stringify(demoAppts()));
+    setOk(true);
+    setTimeout(()=>setPage('login'),1800);
+  };
+
+  return h('div',{className:'auth-wrap'},
+    h('div',{className:'auth-left'},
+      h('div',{className:'auth-brand'},
+        h('div',{className:'auth-brand-mark'},
+          h('svg',{viewBox:'0 0 20 20',width:18,height:18,fill:'none',stroke:'#fff',strokeWidth:2.5,strokeLinecap:'round'},
+            h('path',{d:'M10 4v12M6 8l4-4 4 4'})
+          )
+        ),
+        'MediCita'
+      ),
+      h('div',{className:'auth-tagline'},
+        h('h1',null,'Regístrate\nen minutos.'),
+        h('p',null,'Crea tu perfil de paciente con tus datos básicos. Solo necesitas tu CURP para acceder después.')
+      ),
+      h('div',{style:{color:'rgba(255,255,255,.45)',fontSize:12}},'Centro Médico Integral · Aguascalientes')
+    ),
+    h('div',{className:'auth-right',style:{alignItems:'flex-start',overflowY:'auto'}},
+      h('div',{className:'auth-box',style:{maxWidth:440,paddingTop:24}},
+        h('h2',null,'Crear cuenta'),
+        h('p',{className:'auth-sub'},'Completa tus datos para registrarte como paciente'),
+        err && h('div',{className:'alert alert-err'},err),
+        ok && h('div',{className:'alert alert-ok'},'✓ Cuenta creada. Redirigiendo al inicio de sesión…'),
+        h('div',{className:'g2'},
+          h('div',{className:'fg'},h('label',null,'Nombre(s) *'),h('input',{placeholder:'María',value:f.name,onChange:upd('name')})),
+          h('div',{className:'fg'},h('label',null,'Primer apellido *'),h('input',{placeholder:'García',value:f.ap1,onChange:upd('ap1')})),
+        ),
+        h('div',{className:'fg'},h('label',null,'Segundo apellido'),h('input',{placeholder:'López (opcional)',value:f.ap2,onChange:upd('ap2')})),
+        h('div',{className:'fg'},
+          h('label',null,'CURP *'),
+          h('input',{className:'curp-input',maxLength:18,placeholder:'AAAA######HHHHXX##',value:f.curp,
+            onChange:ev=>setF({...f,curp:ev.target.value.toUpperCase()})}),
+          h('p',{className:'hint'},'Será tu clave única de acceso al sistema')
+        ),
+        h('div',{className:'g2'},
+          h('div',{className:'fg'},h('label',null,'Teléfono *'),h('input',{placeholder:'449-000-0000',value:f.phone,onChange:upd('phone')})),
+          h('div',{className:'fg'},h('label',null,'Correo electrónico *'),h('input',{type:'email',placeholder:'correo@ejemplo.com',value:f.email,onChange:upd('email')})),
+        ),
+        h('div',{className:'fg'},
+          h('label',null,'Clínica asignada *'),
+          h('select',{value:f.branch,onChange:upd('branch')},
+            ...BRANCHES.map(b=>h('option',{key:b.id,value:b.name},b.name+' — '+b.addr))
+          ),
+          h('p',{className:'hint'},'Puedes cambiarla más adelante contactando a recepción')
+        ),
+        h('button',{className:'btn btn-primary',onClick:submit},'Crear mi cuenta'),
+        h('div',{className:'divider'}),
+        h('p',{style:{textAlign:'center',fontSize:14,color:'var(--ink3)'}},
+          '¿Ya tienes cuenta? ',
+          h('button',{className:'link-btn',onClick:()=>setPage('login')},'Inicia sesión')
+        )
+      )
+    )
+  );
+}
+
+/* ── HOME ── */
+function HomePage({user,setPage}){
+  const bObj=BRANCHES.find(b=>b.name===user.branch)||BRANCHES[0];
+  return h('main',null,
+    h('div',{className:'hero'},
+      h('h1',null,'Hola, '+user.name.split(' ')[0]+' 👋'),
+      h('p',null,'Gestiona tus citas médicas, consulta horarios disponibles y accede a tu código QR de identificación.'),
+      h('div',{className:'hero-btns'},
+        h('button',{className:'hbtn-p',onClick:()=>setPage('appts')},'Ver mis citas'),
+        h('button',{className:'hbtn-g',onClick:()=>setPage('branches')},'Sucursales →'),
+      )
+    ),
+    h('div',{className:'stats'},
+      h('div',{className:'stat'},h('div',{className:'stat-n'},'6'),h('div',{className:'stat-l'},'Sucursales')),
+      h('div',{className:'stat'},h('div',{className:'stat-n'},'48'),h('div',{className:'stat-l'},'Médicos')),
+      h('div',{className:'stat'},h('div',{className:'stat-n'},'9'),h('div',{className:'stat-l'},'Especialidades')),
+      h('div',{className:'stat'},h('div',{className:'stat-n'},'24h'),h('div',{className:'stat-l'},'Urgencias')),
+    ),
+    h('div',{className:'sec-hd'},h('h2',null,'Tu clínica asignada'),h('p',null,'Sucursal donde recibirás atención preferencial')),
+    h('div',{className:'card',style:{display:'flex',alignItems:'center',gap:18,flexWrap:'wrap'}},
+      h('div',{style:{width:52,height:52,borderRadius:12,background:'var(--green-lt)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:26}},bObj.emoji),
+      h('div',null,
+        h('div',{style:{fontWeight:700,fontSize:16,fontFamily:"'Syne',sans-serif"}},bObj.name),
+        h('div',{style:{fontSize:13,color:'var(--ink3)',marginTop:2}},bObj.addr),
+        h('div',{style:{fontSize:12.5,color:'var(--ink3)',marginTop:2}},bObj.svcs),
+      ),
+      h('button',{className:'btn btn-ghost btn-sm',style:{marginLeft:'auto'},onClick:()=>setPage('appts')},'Agendar cita')
+    )
+  );
+}
+
+/* ── BOOK MODAL ── */
+function BookModal({user,onClose,onSave}){
+  const today=new Date().toISOString().split('T')[0];
+  const [spec,setSpec]=useState(SPECS[0]);
+  const [branch,setBranch]=useState(user.branch||BRANCHES[0].name);
+  const [date,setDate]=useState(today);
+  const [slots,setSlots]=useState([]);
+  const [loading,setLoading]=useState(false);
+  const [selected,setSelected]=useState(null);
+  const [nextDay,setNextDay]=useState(null);
+
+  const bObj=BRANCHES.find(b=>b.name===branch)||BRANCHES[0];
+
+  const fetchSlots=useCallback(()=>{
+    setLoading(true);setSelected(null);setNextDay(null);
+    // Simula latencia de servidor (~300-600ms)
+    setTimeout(()=>{
+      const s=getSlots(date,bObj.id);
+      setSlots(s);
+      if(!s.some(x=>!x.busy)){
+        const nxt=nextFreeDay(date,bObj.id);
+        if(nxt)setNextDay(nxt);
+      }
+      setLoading(false);
+    },Math.random()*300+300);
+  },[date,bObj.id]);
+
+  useEffect(()=>{fetchSlots();},[fetchSlots]);
+
+  const jumpToNext=()=>{
+    if(!nextDay)return;
+    setDate(nextDay.date);
+  };
+
+  const confirm=()=>{
+    if(!selected)return;
+    const key='mc_appts_'+user.curp;
+    const appts=JSON.parse(localStorage.getItem(key)||'[]');
+    appts.unshift({id:Date.now(),spec,date,time:selected.time,consultory:selected.consultory,status:'pending',branch,note:''});
+    localStorage.setItem(key,JSON.stringify(appts));
+    onSave();onClose();
+  };
+
+  return h('div',{className:'modal-bg',onClick:ev=>{if(ev.target===ev.currentTarget)onClose();}},
+    h('div',{className:'modal'},
+      h('h2',null,'Agendar nueva cita'),
+      h('p',{className:'modal-sub'},'Selecciona especialidad, sucursal y un horario libre'),
+
+      h('div',{className:'fg'},
+        h('label',null,'Especialidad'),
+        h('select',{value:spec,onChange:ev=>setSpec(ev.target.value)},
+          ...SPECS.map(s=>h('option',{key:s},s))
+        )
+      ),
+      h('div',{className:'fg'},
+        h('label',null,'Sucursal'),
+        h('select',{value:branch,onChange:ev=>setBranch(ev.target.value)},
+          ...BRANCHES.map(b=>h('option',{key:b.id,value:b.name},b.name))
+        )
+      ),
+      h('div',{className:'fg'},
+        h('label',null,'Fecha'),
+        h('input',{type:'date',value:date,min:today,onChange:ev=>setDate(ev.target.value)})
+      ),
+      h('div',{className:'divider'}),
+
+      h('div',{style:{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:14,marginBottom:8,color:'var(--ink2)'}},
+        '🕐 Disponibilidad — '+date
+      ),
+
+      loading
+        ? h('div',{className:'loading-dots'},h('span'),h('span'),h('span'))
+        : nextDay
+          ? h('div',null,
+              h('div',{className:'ndbox'},
+                '⚠️ ',h('strong',null,'Sin horarios disponibles para el '+date+'.'),
+                h('br'),
+                'El próximo horario disponible es el ',h('strong',null,nextDay.date),'.'
+              ),
+              h('button',{className:'btn btn-ghost',style:{width:'100%'},onClick:jumpToNext},
+                'Ver disponibilidad el '+nextDay.date+' →'
+              )
+            )
+          : h('div',{className:'avail-grid'},
+              ...slots.map((sl,i)=>
+                h('div',{
+                  key:i,
+                  className:'slot '+(sl.busy?'busy':'free')+(selected&&selected.time===sl.time?' sel':''),
+                  onClick:()=>!sl.busy&&setSelected(sl)
+                },
+                  h('div',{className:'slot-time'},sl.time),
+                  h('div',{className:'slot-lbl'},sl.busy?'Ocupado':'Cons. '+sl.consultory)
+                )
+              )
+            ),
+
+      selected && h('div',{className:'alert alert-ok',style:{marginTop:14}},
+        '✓ '+selected.time+' · Consultorio '+selected.consultory+' — '+spec
+      ),
+
+      h('div',{style:{display:'flex',gap:10,marginTop:18}},
+        h('button',{className:'btn btn-ghost',style:{flex:1},onClick:onClose},'Cancelar'),
+        h('button',{className:'btn btn-primary',style:{flex:2},onClick:confirm,disabled:!selected||loading},'Confirmar cita'),
+      )
+    )
+  );
+}
+
+/* ── APPOINTMENTS ── */
+function ApptsPage({user}){
+  const [appts,setAppts]=useState([]);
+  const [modal,setModal]=useState(false);
+  const [tab,setTab]=useState('all');
+  const load=()=>setAppts(JSON.parse(localStorage.getItem('mc_appts_'+user.curp)||'[]'));
+  useEffect(load,[user.curp]);
+
+  const cancel=id=>{
+    const list=appts.map(a=>a.id===id?{...a,status:'cancelled',note:'Cancelada por el paciente'}:a);
+    localStorage.setItem('mc_appts_'+user.curp,JSON.stringify(list));
+    setAppts(list);
+  };
+
+  const TABS={all:'Todas',pending:'Pendientes',confirmed:'Confirmadas',cancelled:'Canceladas'};
+  const filtered=tab==='all'?appts:appts.filter(a=>
+    tab==='cancelled'?(a.status==='cancelled'||a.status==='delayed'):a.status===tab
+  );
+
+  return h('main',null,
+    modal&&h(BookModal,{user,onClose:()=>setModal(false),onSave:load}),
+    h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:24,flexWrap:'wrap',gap:12}},
+      h('div',{className:'sec-hd',style:{marginBottom:0}},
+        h('h2',null,'Mis citas'),
+        h('p',null,'Estado, horarios y consultorios de tus citas médicas')
+      ),
+      h('button',{className:'btn btn-primary',style:{width:'auto'},onClick:()=>setModal(true)},'+ Agendar cita')
+    ),
+    h('div',{className:'tabs'},
+      ...Object.entries(TABS).map(([k,v])=>
+        h('button',{key:k,className:'tab'+(tab===k?' on':''),onClick:()=>setTab(k)},v)
+      )
+    ),
+    filtered.length===0
+      ? h('div',{className:'empty'},h('div',{className:'empty-ico'},'📋'),h('h3',null,'Sin citas en esta categoría'),h('p',null,'Agenda una nueva cita para verla aquí'))
+      : filtered.map(a=>{
+          const st=ST[a.status]||ST.pending;
+          return h('div',{key:a.id,className:'ac'},
+            h('div',{className:'ac-stripe '+st.stripe}),
+            h('div',{className:'ac-info'},
+              h('div',{style:{display:'flex',alignItems:'center',gap:9,flexWrap:'wrap'}},
+                h('h3',null,a.spec),
+                h('span',{className:'badge '+st.cls},h('div',{className:'badge-dot'}),st.label)
+              ),
+              h('div',{className:'ac-meta'},
+                h('span',null,'📅 '+a.date),
+                h('span',null,'🕐 '+a.time),
+                h('span',null,'🏥 '+a.branch),
+                h('span',null,'🚪 Consult. '+a.consultory),
+              ),
+              a.note&&h('div',{style:{fontSize:12.5,color:'var(--ink3)',marginTop:5,fontStyle:'italic'}},'ℹ️ '+a.note)
+            ),
+            (a.status!=='cancelled'&&a.status!=='delayed')
+              ? h('button',{className:'btn btn-danger-soft btn-sm',onClick:()=>cancel(a.id)},'Cancelar')
+              : null
+          );
+        })
+  );
+}
+
+/* ── QR ── */
+function QRPage({user}){
+  const ref=useRef(null);
+  const [done,setDone]=useState(false);
+  const tok=localStorage.getItem('mc_token')||'';
+  const decoded=readJWT(tok);
+  // QR apunta a login con flag ?qr=1
+  const qrUrl='http://localhost:3000/?qr=1';
+
+  useEffect(()=>{
+    if(ref.current&&!done){
+      ref.current.innerHTML='';
+      new QRCode(ref.current,{text:qrUrl,width:220,height:220,colorDark:'#0a5940',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+      setDone(true);
+    }
+  },[]);
+
+  return h('main',null,
+    h('div',{style:{maxWidth:500,margin:'0 auto'}},
+      h('div',{className:'sec-hd',style:{textAlign:'center'}},
+        h('h2',null,'Tu código QR de acceso'),
+        h('p',null,'Preséntalo en recepción o escanéalo para iniciar sesión automáticamente')
+      ),
+      h('div',{className:'card'},
+        h('div',{className:'qr-wrap'},
+          h('div',{className:'alert alert-info',style:{width:'100%',textAlign:'center',justifyContent:'center'}},
+            '📱 Escanear abre la pantalla de login en ',h('strong',null,qrUrl)
+          ),
+          h('div',{id:'qrdiv',ref}),
+          h('div',{className:'qr-chip'},
+            h('div',{className:'qr-chip-name'},user.name),
+            h('div',{className:'qr-chip-sub'},'CURP: '+user.curp),
+            decoded&&h('div',{style:{fontSize:11.5,color:'var(--green2)',marginTop:3}},
+              'Token válido hasta: '+new Date(decoded.exp).toLocaleDateString('es-MX')
+            )
+          ),
+          h('div',{className:'divider',style:{width:'100%'}}),
+          h('div',{style:{fontSize:11,color:'var(--ink3)',fontFamily:'monospace',wordBreak:'break-all',background:'var(--page)',padding:'10px 12px',borderRadius:8,width:'100%'}},
+            'JWT: '+tok.substring(0,70)+'…'
+          )
+        )
+      )
+    )
+  );
+}
+
+/* ── BRANCHES ── */
+function BranchesPage(){
+  return h('main',null,
+    h('div',{className:'sec-hd'},
+      h('h2',null,'Nuestras sucursales'),
+      h('p',null,BRANCHES.length+' sucursales en Aguascalientes y área metropolitana')
+    ),
+    h('div',{className:'stats'},
+      h('div',{className:'stat'},h('div',{className:'stat-n'},BRANCHES.length),h('div',{className:'stat-l'},'Sucursales')),
+      h('div',{className:'stat'},h('div',{className:'stat-n'},'48'),h('div',{className:'stat-l'},'Médicos activos')),
+      h('div',{className:'stat'},h('div',{className:'stat-n'},'9'),h('div',{className:'stat-l'},'Especialidades')),
+      h('div',{className:'stat'},h('div',{className:'stat-n'},'1'),h('div',{className:'stat-l'},'Urgencias 24h')),
+    ),
+    h('div',{className:'g3'},
+      ...BRANCHES.map(b=>h('div',{key:b.id,className:'branch-card'},
+        h('div',{className:'branch-top'},b.emoji),
+        h('div',{className:'branch-body'},
+          h('h3',null,b.name),
+          h('div',{className:'branch-meta'},
+            h('div',null,'📍 '+b.addr),
+            h('div',null,'📞 '+b.phone),
+            h('div',null,'👨‍⚕️ '+b.docs+' médicos'),
+            h('div',{style:{marginTop:5}},h('span',{className:'badge badge-ok'},h('div',{className:'badge-dot'}),'Activa')),
+          ),
+          h('div',{className:'divider',style:{margin:'10px 0'}}),
+          h('div',{style:{fontSize:12,color:'var(--ink3)'}},b.svcs)
+        )
+      ))
+    )
+  );
+}
+
+/* ── APP ── */
+function App(){
+  const [page,setPage]=useState('login');
+  const [user,setUser]=useState(null);
+
+  useEffect(()=>{
+    // Si viene desde QR forzar login
+    if(window.location.search.includes('qr=1')){setPage('login');return;}
+    // Restaurar sesión si el JWT sigue válido
+    const tok=localStorage.getItem('mc_token');
+    if(tok){
+      const p=readJWT(tok);
+      if(p&&p.exp>Date.now()){
+        const users=JSON.parse(localStorage.getItem('mc_users')||'[]');
+        const found=users.find(u=>u.curp===p.curp);
+        if(found){setUser(found);setPage('home');}
+      }
+    }
+  },[]);
+
+  const logout=()=>{localStorage.removeItem('mc_token');setUser(null);setPage('login');};
+
+  // Páginas de auth: sin topbar, pantalla completa
+  if(!user&&(page==='login'||page==='register')){
+    return page==='login'
+      ? h(LoginPage,{setUser,setPage})
+      : h(RegisterPage,{setPage});
+  }
+
+  let content;
+  if(!user)               content=h(LoginPage,{setUser,setPage});
+  else if(page==='home')  content=h(HomePage,{user,setPage});
+  else if(page==='appts') content=h(ApptsPage,{user});
+  else if(page==='qr')    content=h(QRPage,{user});
+  else if(page==='branches') content=h(BranchesPage);
+  else                    content=h(HomePage,{user,setPage});
+
+  return h('div',{className:'app-shell'},
+    h(Topbar,{page,setPage,user,logout}),
+    content
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(h(App));
+</script>
+</body>
+</html>

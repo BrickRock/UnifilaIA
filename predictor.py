@@ -2,6 +2,8 @@ from sklearn.ensemble import RandomForestRegressor
 import pandas as pd
 import joblib
 
+#esta archivo solo se ejecuta una vez 
+
 df = pd.read_csv("dataset_consultas.csv")
 
 X = df.drop(columns=["paciente_id", "duracion_minutos"])
