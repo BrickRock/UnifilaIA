@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
 from database import db
 from models import TurnoSimplificado
 from schemas import TurnoCreate
@@ -34,19 +34,35 @@ def registrar_turno(payload: TurnoCreate, session: Session = Depends(get_db)):
         payload.es_seguimiento
     )
 
-    nuevo_turno = TurnoSimplificado(**payload.model_dump(), score=score)
+    # Posición en la cola para que el modelo la use como feature
+    num_consulta_turno = (session.execute(select(func.count(TurnoSimplificado.id))).scalar() or 0) + 1
+
+    duracion_estimada = QueueEngine.predict_duracion(
+        preventiva=payload.preventiva,
+        mas_de_un_sintoma=payload.mas_de_un_sintoma,
+        adulto=payload.adulto,
+        comorbilidad=payload.comorbilidad,
+        tiene_laboratorio=payload.tiene_laboratorio,
+        es_seguimiento=payload.es_seguimiento,
+        num_consulta_turno=num_consulta_turno,
+    )
+
+    nuevo_turno = TurnoSimplificado(
+        **payload.model_dump(),
+        score=score,
+        duracion_estimada_minutos=duracion_estimada,
+    )
     session.add(nuevo_turno)
     session.commit()
 
-    tiempo_estimado = QueueEngine.get_estimated_wait_time(session)
-    hora_sugerida = datetime.now() + timedelta(minutes=tiempo_estimado)
+    arribo = QueueEngine.calcular_hora_arribo(session)
 
     return {
         "mensaje": "Turno registrado.",
         "id": nuevo_turno.id,
         "score": score,
-        "tiempo_estimado_minutos": tiempo_estimado,
-        "hora_sugerida_llegada": hora_sugerida.isoformat(),
+        "duracion_estimada_minutos": round(duracion_estimada, 1) if duracion_estimada else None,
+        **arribo,
     }
 
 
@@ -54,17 +70,22 @@ def registrar_turno(payload: TurnoCreate, session: Session = Depends(get_db)):
 def listar_cola(session: Session = Depends(get_db)):
     cola = session.query(TurnoSimplificado).order_by(TurnoSimplificado.score.desc()).all()
     return [
-        {"id": t.id, "score": t.score, "adulto": t.adulto, "comorbilidad": t.comorbilidad}
+        {
+            "id": t.id,
+            "score": t.score,
+            "adulto": t.adulto,
+            "comorbilidad": t.comorbilidad,
+            "duracion_estimada_minutos": t.duracion_estimada_minutos,
+        }
         for t in cola
     ]
-    return cola
 
-@router.delete("/{turno_id}")
+
+@router.delete("/{turno_id}", status_code=200)
 def cancelar_turno(turno_id: int, session: Session = Depends(get_db)):
     turno = session.query(TurnoSimplificado).filter(TurnoSimplificado.id == turno_id).first()
     if not turno:
-        raise HTTPException(status_code=404, detail="Turno no encontrado")
-    
+        raise HTTPException(status_code=404, detail="Turno no encontrado.")
     session.delete(turno)
     session.commit()
-    return {"mensaje": "Turno cancelado"}
+    return {"mensaje": f"Turno {turno_id} cancelado."}
