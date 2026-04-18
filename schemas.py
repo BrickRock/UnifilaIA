@@ -4,19 +4,6 @@ from typing import Optional
 from models import TipoConsulta, EstadoAtencion
 
 
-<<<<<<< HEAD
-class PacienteBase(BaseModel):
-    curp: str = Field(..., min_length=18, max_length=18)
-    nss: Optional[str] = Field(None, min_length=11, max_length=11, description="NSS de 11 dígitos")
-    nombre_completo: str
-    fecha_nacimiento: date
-    sexo: Optional[str] = None
-    es_cronico: bool = False
-
-class PacienteCreate(PacienteBase):
-    es_cronico_general: bool = False
-
-=======
 class PacienteCreate(BaseModel):
     nss:                str  = Field(min_length=11, max_length=11, description="NSS de 11 dígitos")
     nombre_completo:    str  = Field(max_length=150)
@@ -45,7 +32,6 @@ class PacienteFormadoCreate(BaseModel):
     edad_al_momento:      int = Field(gt=0)
 
 
->>>>>>> 26a005f72acf18f68819887f653555c554a34f16
 class TurnoCreate(BaseModel):
     preventiva:        int = Field(..., ge=0, le=1)
     mas_de_un_sintoma: int = Field(..., ge=0, le=1)

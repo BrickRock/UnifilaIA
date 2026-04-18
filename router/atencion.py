@@ -25,18 +25,15 @@ def registrar_turno(payload: TurnoCreate, session: Session = Depends(get_db)):
     if _estado_sistema == ESTADOS_UNIFILA.SATURADO:
         raise HTTPException(status_code=503, detail="Sistema saturado. No se aceptan nuevos turnos.")
 
-    score = (
-        payload.preventiva +
-        payload.mas_de_un_sintoma +
-        payload.adulto +
-        payload.comorbilidad +
-        payload.tiene_laboratorio +
-        payload.es_seguimiento
-    )
+    # 1. Capturar suma de tiempos ANTES de insertar al nuevo paciente
+    suma_anteriores = QueueEngine.get_suma_tiempos_cola(session)
 
-    # Posición en la cola para que el modelo la use como feature
-    num_consulta_turno = (session.execute(select(func.count(TurnoSimplificado.id))).scalar() or 0) + 1
+    # 2. Posición en cola para la predicción
+    num_consulta_turno = (
+        session.execute(select(func.count(TurnoSimplificado.id))).scalar() or 0
+    ) + 1
 
+    # 3. Predecir duración con el RandomForest
     duracion_estimada = QueueEngine.predict_duracion(
         preventiva=payload.preventiva,
         mas_de_un_sintoma=payload.mas_de_un_sintoma,
@@ -47,6 +44,13 @@ def registrar_turno(payload: TurnoCreate, session: Session = Depends(get_db)):
         num_consulta_turno=num_consulta_turno,
     )
 
+    # 4. Score = suma de factores de riesgo
+    score = (
+        payload.preventiva + payload.mas_de_un_sintoma + payload.adulto +
+        payload.comorbilidad + payload.tiene_laboratorio + payload.es_seguimiento
+    )
+
+    # 5. Insertar turno con duración estimada
     nuevo_turno = TurnoSimplificado(
         **payload.model_dump(),
         score=score,
@@ -55,10 +59,10 @@ def registrar_turno(payload: TurnoCreate, session: Session = Depends(get_db)):
     session.add(nuevo_turno)
     session.commit()
 
-    arribo = QueueEngine.calcular_hora_arribo(session)
+    # 6. Calcular hora sugerida: ahora + suma_anteriores - buffer
+    arribo = QueueEngine.calcular_hora_arribo(suma_anteriores)
 
     return {
-        "mensaje": "Turno registrado.",
         "id": nuevo_turno.id,
         "score": score,
         "duracion_estimada_minutos": round(duracion_estimada, 1) if duracion_estimada else None,
