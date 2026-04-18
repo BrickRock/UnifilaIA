@@ -1,3 +1,7 @@
+USUARIO Y CONTRASEÑA PARA LA PÁGINA DEL STAFF MÉDICO
+USUARIO: admin
+contraseña: admin13
+
 ================================================================================
   UNIFILA IA — RESUMEN TÉCNICO DEL SISTEMA
   Gestión inteligente de filas médicas con predicción por IA
@@ -231,3 +235,5 @@ JWT HS256 con expiración de 24 horas, generado con PyJWT.
   Infra:      Docker (FastAPI + PostgreSQL en contenedores separados)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
