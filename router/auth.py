@@ -5,11 +5,12 @@ from sqlalchemy import select
 from datetime import datetime, timedelta, timezone
 from database import db
 from models import Paciente
+import os
 import jwt
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-SECRET_KEY = "unifila-demo-secret-2024"
+SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "unifila-demo-secret-2024")
 ALGORITHM = "HS256"
 TOKEN_EXPIRE_HOURS = 24
 

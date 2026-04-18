@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
@@ -8,9 +9,12 @@ from router import atencion, pacientes, auth, turnos, consultorios, consultas
 
 app = FastAPI(title="UnifilaIA API")
 
+_origins_env = os.environ.get("ALLOWED_ORIGINS", "*")
+_origins = _origins_env.split(",") if _origins_env != "*" else ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

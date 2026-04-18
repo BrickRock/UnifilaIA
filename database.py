@@ -1,11 +1,14 @@
+import os
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
 from models import Base
-# TODO: reemplazar con la cadena real cuando la BD esté levantada
-# Formato PostgreSQL: "postgresql+psycopg2://user:password@host:port/dbname"
-DATABASE_URL = "postgresql+psycopg2://Seguro13X:mysecretpassword@172.17.0.3:5432/imss"
-#
-#POSTGRES_PASSWORD=mysecretpassword -e POSTGRES_USER=Seguro13X
+
+_raw_url = os.environ.get(
+    "DATABASE_URL",
+    "postgresql+psycopg2://Seguro13X:mysecretpassword@172.17.0.3:5432/imss",
+)
+# Railway provee "postgresql://..." pero psycopg2 necesita "postgresql+psycopg2://"
+DATABASE_URL = _raw_url.replace("postgresql://", "postgresql+psycopg2://", 1)
 class _Database:
     _instance: "_Database | None" = None
 
