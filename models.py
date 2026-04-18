@@ -11,6 +11,16 @@ class RegistrarPacienteRequest(BaseModel):
     apellido: str
     curp: str
 
+class RegistroPresencialRequest(BaseModel):
+    nss: str
+    nombre_completo: str
+    fecha_nacimiento: str  # Formato YYYY-MM-DD
+    sexo: str
+    telefono: int
+    id_consultorio: int
+    tipo_consulta: TipoConsulta
+    es_cronico: bool = False
+
 
 
 class Base(DeclarativeBase):

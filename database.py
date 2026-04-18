@@ -3,7 +3,7 @@ from sqlalchemy.orm import sessionmaker, Session
 
 # TODO: reemplazar con la cadena real cuando la BD esté levantada
 # Formato PostgreSQL: "postgresql+psycopg2://user:password@host:port/dbname"
-DATABASE_URL = "postgresql+psycopg2://user:password@localhost:5432/unifila"
+DATABASE_URL = "postgresql+psycopg2://user:password@10.45.179.6:5432/unifila"
 
 
 class _Database:
