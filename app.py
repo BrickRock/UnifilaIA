@@ -1,7 +1,9 @@
 from fastapi import FastAPI, HTTPException
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from utils import ESTADOS_UNIFILA
-from models import RegistrarPacienteRequest
+from models import Paciente, PacienteFormado
+from schemas import PacienteCreate, PacienteFormadoCreate
 from database import db
 
 app = FastAPI()
@@ -18,9 +20,6 @@ def health_check():
 
 ESTADO = ESTADOS_UNIFILA.NORMAL.value
 
-pacientes_db: list[dict] = []
-
-
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
@@ -33,24 +32,54 @@ def read_item(item_id: int, q: str | None = None):
 
 @app.get("/estado_unifila")
 def get_status():
-    """
-    Retorna el estado actual de la unifila: NORMAL, SATURANDOSE o SATURADO.
-    """
     return {"estado": ESTADO}
 
 
-@app.post("/pacientes", status_code=200)
-def registrar_paciente(body: RegistrarPacienteRequest):
+@app.post("/pacientes", status_code=201)
+def registrar_paciente(body: PacienteCreate):
     if ESTADO == ESTADOS_UNIFILA.SATURADO.value:
-        raise HTTPException(status_code=503, detail="Unifila saturada, no se aceptan más pacientes.")
+        raise HTTPException(status_code=400, detail="Sistema saturado no se aceptan nuevos pacientes en unifila")
+    session = db.get_session()
+    try:
+        paciente = Paciente(**body.model_dump())
+        session.add(paciente)
+        session.commit()
+        session.refresh(paciente)
+        return {"mensaje": "Paciente registrado", "id_paciente": paciente.id_paciente, "status" : ESTADO}
+    except IntegrityError as e:
+        session.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail=f"Ya existe un paciente con ese NSS ({body.nss})."
+        )
+    except SQLAlchemyError as e:
+        session.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al registrar paciente: {e}")
+    finally:
+        session.close()
 
-    paciente = {
-        "id": len(pacientes_db) + 1,
-        "nombre": body.nombre,
-        "apellido": body.apellido,
-        "curp": body.curp,
-    }
-    pacientes_db.append(paciente)
 
-    # TODO: persistir con db.get_session() cuando la BD esté levantada
-    return {"mensaje": "Paciente registrado", "paciente": paciente}
+@app.post("/pacientes-formados", status_code=201)
+def registrar_paciente_formado(body: PacienteFormadoCreate):
+    session = db.get_session()
+    try:
+        formado = PacienteFormado(**body.model_dump())
+        session.add(formado)
+        session.commit()
+        session.refresh(formado)
+        return {"mensaje": "Paciente formado registrado", "id_turno_dia": formado.id_turno_dia}
+    except IntegrityError as e:
+        session.rollback()
+        orig = str(e.orig)
+        if "id_paciente" in orig:
+            detail = f"No existe un paciente con id {body.id_paciente}."
+        elif "id_consultorio" in orig:
+            detail = f"No existe un consultorio con id {body.id_consultorio}."
+        else:
+            detail = "Violación de integridad en la BD."
+        raise HTTPException(status_code=409, detail=detail)
+    except SQLAlchemyError as e:
+        session.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al registrar paciente formado: {e}")
+    finally:
+        session.close()
