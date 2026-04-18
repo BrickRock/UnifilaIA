@@ -3,6 +3,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
 from models import Base
 
+print(os.getenv('DATABASE_URL'))
 _raw_url = os.environ.get(
     "DATABASE_URL",
     "postgresql+psycopg2://Seguro13X:mysecretpassword@172.17.0.3:5432/imss",
