@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import func, select
+from sqlalchemy import func, select, or_, and_
 from sqlalchemy.orm import Session
 from database import db
 from models import TurnoSimplificado
@@ -87,17 +87,19 @@ def estado_paciente(nss: str, session: Session = Depends(get_db)):
     if not turno:
         raise HTTPException(status_code=404, detail="No tienes turno activo.")
 
-    # Calcular posición: cuántos pacientes tienen score mayor (están delante)
+    # "Adelante" = mayor score, o mismo score pero id menor (llegó antes)
+    condicion_adelante = or_(
+        TurnoSimplificado.score > turno.score,
+        and_(TurnoSimplificado.score == turno.score, TurnoSimplificado.id < turno.id)
+    )
+
     adelante = session.execute(
-        select(func.count(TurnoSimplificado.id)).where(
-            TurnoSimplificado.score > turno.score
-        )
+        select(func.count(TurnoSimplificado.id)).where(condicion_adelante)
     ).scalar() or 0
     posicion = adelante + 1
 
-    # Suma de duraciones de los pacientes que van delante
     cola_adelante = session.execute(
-        select(TurnoSimplificado).where(TurnoSimplificado.score > turno.score)
+        select(TurnoSimplificado).where(condicion_adelante)
     ).scalars().all()
 
     if cola_adelante:
@@ -119,7 +121,7 @@ def estado_paciente(nss: str, session: Session = Depends(get_db)):
 
 @router.get("/cola", status_code=200)
 def listar_cola(session: Session = Depends(get_db)):
-    cola = session.query(TurnoSimplificado).order_by(TurnoSimplificado.score.desc()).all()
+    cola = session.query(TurnoSimplificado).order_by(TurnoSimplificado.score.desc(), TurnoSimplificado.id.asc()).all()
     return [
         {
             "id": t.id,

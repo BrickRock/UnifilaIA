@@ -143,7 +143,7 @@ const App: React.FC = () => {
   );
   else if (page === 'queue') content = (
     <QueuePage
-      user={user}
+      nss={user?.nss}
       onLeave={() => setIsConfirmOpen(true)}
       horaArribo={activeQueueAppt?.horaArribo}
       duracionMinutos={activeQueueAppt?.duracionMinutos}

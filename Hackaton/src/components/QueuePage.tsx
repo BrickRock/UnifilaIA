@@ -2,68 +2,87 @@ import React, { useEffect, useState } from 'react';
 import { PATH } from '../api';
 
 interface QueuePageProps {
-  user: any;
+  nss?: string;
   onLeave: () => void;
-  horaArribo?: string;       // ISO string del backend
+  horaArribo?: string;
   duracionMinutos?: number;
   sumaMinutos?: number;
 }
 
 function formatHHMM(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
+  return new Date(iso).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
 function addMinutes(iso: string, mins: number) {
-  const d = new Date(new Date(iso).getTime() + mins * 60000);
-  return d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
+  return new Date(new Date(iso).getTime() + mins * 60000)
+    .toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+interface EstadoData {
+  id: number;
+  score: number;
+  posicion: number;
+  duracion_estimada_minutos: number | null;
+  suma_tiempos_anteriores_min: number;
+  buffer_aplicado_min: number;
+  hora_sugerida_arribo: string;
 }
 
 export const QueuePage: React.FC<QueuePageProps> = ({
-  onLeave, horaArribo, duracionMinutos, sumaMinutos
-}: QueuePageProps) => {
-  const [queue, setQueue] = useState<any[]>([]);
+  nss, onLeave, horaArribo: horaArriboInicial, duracionMinutos: duracionInicial, sumaMinutos: sumaInicial
+}) => {
+  const [estado, setEstado] = useState<EstadoData | null>(null);
   const [loading, setLoading] = useState(true);
   const [minutosRestantes, setMinutosRestantes] = useState<number>(999);
 
-  // Calcular y actualizar minutos restantes cada 30s
+  // Obtener estado del paciente desde el endpoint /estado/{nss}
+  const fetchEstado = async () => {
+    if (!nss) return;
+    try {
+      const res = await fetch(`${PATH}/atencion/estado/${nss}`);
+      if (res.ok) {
+        const data: EstadoData = await res.json();
+        setEstado(data);
+      }
+    } catch (e) {
+      console.error('Error fetching estado', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    if (!horaArribo) return;
+    fetchEstado();
+    const interval = setInterval(fetchEstado, 10000);
+    return () => clearInterval(interval);
+  }, [nss]);
+
+  // Calcular minutos restantes cada 30s usando hora del endpoint (o la inicial si aún no llegó)
+  const horaActual = estado?.hora_sugerida_arribo ?? horaArriboInicial;
+  useEffect(() => {
+    if (!horaActual) return;
     const update = () => {
-      const diff = (new Date(horaArribo).getTime() - Date.now()) / 60000;
+      const diff = (new Date(horaActual).getTime() - Date.now()) / 60000;
       setMinutosRestantes(Math.max(0, Math.round(diff)));
     };
     update();
     const t = setInterval(update, 30000);
     return () => clearInterval(t);
-  }, [horaArribo]);
+  }, [horaActual]);
 
-  useEffect(() => {
-    const fetchQueue = async () => {
-      try {
-        const res = await fetch(`${PATH}/atencion/cola`);
-        if (res.ok) setQueue(await res.json());
-      } catch (e) {
-        console.error('Error fetching queue', e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchQueue();
-    const interval = setInterval(fetchQueue, 10000);
-    return () => clearInterval(interval);
-  }, []);
+  const urgent = minutosRestantes <= 60 && horaActual !== undefined;
 
-  const position = queue.findIndex(q => q.id === (window as any).activeQueueId) + 1;
-  const urgent = minutosRestantes <= 60 && horaArribo !== undefined;
-
-  const horaInicio = horaArribo ? formatHHMM(horaArribo) : '--:--';
-  const horaFin    = horaArribo && duracionMinutos ? addMinutes(horaArribo, duracionMinutos) : '--:--';
-  const esperaReal = sumaMinutos !== undefined ? Math.max(0, Math.round(sumaMinutos - 15)) : null;
+  // Datos a mostrar: prioridad al endpoint, fallback a props iniciales
+  const posicion   = estado?.posicion ?? 1;
+  const duracion   = estado?.duracion_estimada_minutos ?? duracionInicial;
+  const sumaMin    = estado?.suma_tiempos_anteriores_min ?? sumaInicial;
+  const esperaReal = sumaMin !== undefined ? Math.max(0, Math.round(sumaMin - 15)) : null;
+  const horaInicio = horaActual ? formatHHMM(horaActual) : '--:--';
+  const horaFin    = horaActual && duracion ? addMinutes(horaActual, duracion) : '--:--';
 
   return (
     <main style={{ maxWidth: '600px', margin: '0 auto', padding: '60px 24px' }} className="animate-in">
-      {/* Banner de alerta cuando queda menos de 1 hora */}
+
       {urgent && (
         <div style={{
           background: minutosRestantes <= 15 ? 'rgba(220,38,38,0.08)' : 'rgba(234,179,8,0.1)',
@@ -78,14 +97,8 @@ export const QueuePage: React.FC<QueuePageProps> = ({
         }}>
           <span style={{ fontSize: '24px' }}>{minutosRestantes <= 15 ? '🚨' : '⚠️'}</span>
           <div>
-            <div style={{
-              fontWeight: '700',
-              fontSize: '14px',
-              color: minutosRestantes <= 15 ? '#dc2626' : '#92400e',
-            }}>
-              {minutosRestantes <= 15
-                ? '¡Dirígete a la clínica ahora!'
-                : `Preséntate pronto — faltan ${minutosRestantes} minutos`}
+            <div style={{ fontWeight: '700', fontSize: '14px', color: minutosRestantes <= 15 ? '#dc2626' : '#92400e' }}>
+              {minutosRestantes <= 15 ? '¡Dirígete a la clínica ahora!' : `Preséntate pronto — faltan ${minutosRestantes} minutos`}
             </div>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
               Tu horario de arribo es a las {horaInicio}
@@ -94,17 +107,14 @@ export const QueuePage: React.FC<QueuePageProps> = ({
         </div>
       )}
 
-      <div
-        className="card"
-        style={{
-          textAlign: 'center',
-          padding: '48px 32px',
-          boxShadow: urgent
-            ? `0 0 0 2px ${minutosRestantes <= 15 ? '#dc2626' : '#ca8a04'}, var(--shadow-md)`
-            : 'var(--shadow-md)',
-          transition: 'box-shadow 0.3s',
-        }}
-      >
+      <div className="card" style={{
+        textAlign: 'center',
+        padding: '48px 32px',
+        boxShadow: urgent
+          ? `0 0 0 2px ${minutosRestantes <= 15 ? '#dc2626' : '#ca8a04'}, var(--shadow-md)`
+          : 'var(--shadow-md)',
+        transition: 'box-shadow 0.3s',
+      }}>
         <div style={{
           width: '80px', height: '80px',
           background: urgent ? (minutosRestantes <= 15 ? 'rgba(220,38,38,0.08)' : 'rgba(234,179,8,0.1)') : 'var(--bg)',
@@ -119,9 +129,7 @@ export const QueuePage: React.FC<QueuePageProps> = ({
           Lugar Reservado
         </h2>
         <p className="text-muted" style={{ fontSize: '16px', marginBottom: '40px' }}>
-          {loading
-            ? 'Calculando tu posición...'
-            : `Hay ${queue.length} persona${queue.length !== 1 ? 's' : ''} en espera.`}
+          {loading ? 'Calculando tu posición...' : `Eres el número ${posicion} en la fila.`}
         </p>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
@@ -130,7 +138,7 @@ export const QueuePage: React.FC<QueuePageProps> = ({
               Posición
             </p>
             <div style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text)' }}>
-              #{position > 0 ? position : 1}
+              #{loading ? '...' : posicion}
             </div>
           </div>
 
@@ -144,8 +152,7 @@ export const QueuePage: React.FC<QueuePageProps> = ({
           </div>
         </div>
 
-        {/* Tarjeta de minutos restantes */}
-        {horaArribo && (
+        {horaActual && (
           <div style={{
             background: 'var(--bg)', padding: '16px', borderRadius: 'var(--r)',
             border: '1px solid var(--border)', marginBottom: '16px',
@@ -162,11 +169,8 @@ export const QueuePage: React.FC<QueuePageProps> = ({
           </div>
         )}
 
-        {/* Franja horaria */}
         <div style={{
-          background: urgent
-            ? (minutosRestantes <= 15 ? 'rgba(220,38,38,0.06)' : 'rgba(234,179,8,0.08)')
-            : 'var(--green-lt)',
+          background: urgent ? (minutosRestantes <= 15 ? 'rgba(220,38,38,0.06)' : 'rgba(234,179,8,0.08)') : 'var(--green-lt)',
           padding: '20px',
           borderRadius: 'var(--r)',
           marginBottom: '40px',
@@ -176,9 +180,9 @@ export const QueuePage: React.FC<QueuePageProps> = ({
           <p style={{ margin: 0, fontWeight: '600', color: urgent ? (minutosRestantes <= 15 ? '#dc2626' : '#92400e') : 'var(--green)' }}>
             Tu horario: {horaInicio} – {horaFin}
           </p>
-          {duracionMinutos && (
+          {duracion && (
             <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>
-              Consulta estimada: {Math.round(duracionMinutos)} min
+              Consulta estimada: {Math.round(duracion)} min
             </p>
           )}
         </div>
