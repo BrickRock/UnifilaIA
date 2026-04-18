@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import db
 from models import TurnoSimplificado
@@ -40,3 +40,13 @@ def listar_cola(session: Session = Depends(get_db)):
     # Retorna la cola ordenada por score (mayor score = mayor prioridad)
     cola = session.query(TurnoSimplificado).order_by(TurnoSimplificado.score.desc()).all()
     return cola
+
+@router.delete("/{turno_id}")
+def cancelar_turno(turno_id: int, session: Session = Depends(get_db)):
+    turno = session.query(TurnoSimplificado).filter(TurnoSimplificado.id == turno_id).first()
+    if not turno:
+        raise HTTPException(status_code=404, detail="Turno no encontrado")
+    
+    session.delete(turno)
+    session.commit()
+    return {"mensaje": "Turno cancelado"}
