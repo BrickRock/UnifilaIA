@@ -57,3 +57,14 @@ def listar_cola(session: Session = Depends(get_db)):
         {"id": t.id, "score": t.score, "adulto": t.adulto, "comorbilidad": t.comorbilidad}
         for t in cola
     ]
+    return cola
+
+@router.delete("/{turno_id}")
+def cancelar_turno(turno_id: int, session: Session = Depends(get_db)):
+    turno = session.query(TurnoSimplificado).filter(TurnoSimplificado.id == turno_id).first()
+    if not turno:
+        raise HTTPException(status_code=404, detail="Turno no encontrado")
+    
+    session.delete(turno)
+    session.commit()
+    return {"mensaje": "Turno cancelado"}
