@@ -104,14 +104,15 @@ class PacienteFormado(Base):
 class TurnoSimplificado(Base):
     __tablename__ = "turno_simplificado"
 
-    id:                       Mapped[int]            = mapped_column(Integer, primary_key=True)
-    preventiva:               Mapped[int]            = mapped_column(Integer, nullable=False)
-    mas_de_un_sintoma:        Mapped[int]            = mapped_column(Integer, nullable=False)
-    adulto:                   Mapped[int]            = mapped_column(Integer, nullable=False)
-    comorbilidad:             Mapped[int]            = mapped_column(Integer, nullable=False)
-    tiene_laboratorio:        Mapped[int]            = mapped_column(Integer, nullable=False)
-    es_seguimiento:           Mapped[int]            = mapped_column(Integer, nullable=False)
-    score:                    Mapped[int]            = mapped_column(Integer, nullable=False)
+    id:                        Mapped[int]            = mapped_column(Integer, primary_key=True)
+    nss:                       Mapped[Optional[str]]  = mapped_column(String(11), nullable=True, index=True)
+    preventiva:                Mapped[int]            = mapped_column(Integer, nullable=False)
+    mas_de_un_sintoma:         Mapped[int]            = mapped_column(Integer, nullable=False)
+    adulto:                    Mapped[int]            = mapped_column(Integer, nullable=False)
+    comorbilidad:              Mapped[int]            = mapped_column(Integer, nullable=False)
+    tiene_laboratorio:         Mapped[int]            = mapped_column(Integer, nullable=False)
+    es_seguimiento:            Mapped[int]            = mapped_column(Integer, nullable=False)
+    score:                     Mapped[int]            = mapped_column(Integer, nullable=False)
     duracion_estimada_minutos: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
 

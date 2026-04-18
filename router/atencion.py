@@ -25,6 +25,14 @@ def registrar_turno(payload: TurnoCreate, session: Session = Depends(get_db)):
     if _estado_sistema == ESTADOS_UNIFILA.SATURADO:
         raise HTTPException(status_code=503, detail="Sistema saturado. No se aceptan nuevos turnos.")
 
+    # Verificar que el paciente no esté ya en cola
+    if payload.nss:
+        existente = session.execute(
+            select(TurnoSimplificado).where(TurnoSimplificado.nss == payload.nss)
+        ).scalar_one_or_none()
+        if existente:
+            raise HTTPException(status_code=409, detail="Ya tienes un turno activo en la unifila.")
+
     # 1. Capturar suma de tiempos ANTES de insertar al nuevo paciente
     suma_anteriores = QueueEngine.get_suma_tiempos_cola(session)
 
@@ -66,6 +74,45 @@ def registrar_turno(payload: TurnoCreate, session: Session = Depends(get_db)):
         "id": nuevo_turno.id,
         "score": score,
         "duracion_estimada_minutos": round(duracion_estimada, 1) if duracion_estimada else None,
+        **arribo,
+    }
+
+
+@router.get("/estado/{nss}", status_code=200)
+def estado_paciente(nss: str, session: Session = Depends(get_db)):
+    turno = session.execute(
+        select(TurnoSimplificado).where(TurnoSimplificado.nss == nss)
+    ).scalar_one_or_none()
+
+    if not turno:
+        raise HTTPException(status_code=404, detail="No tienes turno activo.")
+
+    # Calcular posición: cuántos pacientes tienen score mayor (están delante)
+    adelante = session.execute(
+        select(func.count(TurnoSimplificado.id)).where(
+            TurnoSimplificado.score > turno.score
+        )
+    ).scalar() or 0
+    posicion = adelante + 1
+
+    # Suma de duraciones de los pacientes que van delante
+    cola_adelante = session.execute(
+        select(TurnoSimplificado).where(TurnoSimplificado.score > turno.score)
+    ).scalars().all()
+
+    if cola_adelante:
+        duraciones = [t.duracion_estimada_minutos or QueueEngine.MINUTOS_POR_PACIENTE for t in cola_adelante]
+        suma_adelante = sum(duraciones)
+    else:
+        suma_adelante = 0.0
+
+    arribo = QueueEngine.calcular_hora_arribo(suma_adelante)
+
+    return {
+        "id": turno.id,
+        "score": turno.score,
+        "posicion": posicion,
+        "duracion_estimada_minutos": round(turno.duracion_estimada_minutos, 1) if turno.duracion_estimada_minutos else None,
         **arribo,
     }
 

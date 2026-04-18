@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { makeJWT } from '../utils';
 import { PATH } from '../api';
 
 interface LoginPageProps {
@@ -21,20 +20,20 @@ export const LoginPage: React.FC<LoginPageProps> = ({ setUser, setPage }) => {
       const response = await fetch(`${PATH}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user: val, password: 'admin' }) 
+        body: JSON.stringify({ user: val, password: 'admin' })
       });
 
-      if (!response.ok) throw new Error('Credenciales inválidas');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Credenciales inválidas');
+      }
 
-      // Intentar obtener datos del paciente usando el NSS como identificador
-      // Nota: Si el backend requiere CURP para /pacientes/, necesitaremos que el login devuelva el perfil
-      let userData = { nss: val, name: 'Paciente' };
-      
-      localStorage.setItem('mc_token', 'fake-token'); 
-      setUser(userData);
+      const data = await response.json();
+      localStorage.setItem('mc_token', data.access_token);
+      setUser({ ...data.user, name: data.user.nombre });
       setPage('home');
-    } catch (err) {
-      setErr('Error al iniciar sesión. Verifica tu NSS.');
+    } catch (err: any) {
+      setErr(err.message || 'Error al iniciar sesión. Verifica tu NSS.');
     } finally {
       setLoading(false);
     }

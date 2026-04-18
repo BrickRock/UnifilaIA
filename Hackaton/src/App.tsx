@@ -23,17 +23,34 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const tok = localStorage.getItem('mc_token');
-    if (tok) {
-      const p = readJWT(tok);
-      if (p && p.exp > Date.now()) {
-        const users = JSON.parse(localStorage.getItem('mc_users') || '[]');
-        const found = users.find((u: any) => u.curp === p.curp);
-        if (found) {
-          setUser(found);
+    if (!tok) return;
+    const p = readJWT(tok);
+    if (!p || !p.exp || p.exp * 1000 <= Date.now()) {
+      localStorage.removeItem('mc_token');
+      return;
+    }
+    const restoredUser = { nss: p.nss || p.sub, nombre: p.nombre, name: p.nombre, id: p.id, role: p.role };
+    setUser(restoredUser);
+
+    // Verificar si ya tiene turno activo en la unifila
+    fetch(`${PATH}/atencion/estado/${p.nss || p.sub}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data) {
+          (window as any).activeQueueId = data.id;
+          setActiveQueueAppt({
+            id: data.id,
+            score: data.score,
+            horaArribo: data.hora_sugerida_arribo,
+            duracionMinutos: data.duracion_estimada_minutos,
+            sumaMinutos: data.suma_tiempos_anteriores_min,
+          });
+          setPage('queue');
+        } else {
           setPage('home');
         }
-      }
-    }
+      })
+      .catch(() => setPage('home'));
   }, []);
 
   const logout = () => {
@@ -45,38 +62,59 @@ const App: React.FC = () => {
 
   const toggleTheme = () => setTheme(theme === 'light' ? 'dark' : 'light');
 
-  const handleJoinQueue = async () => {
-    // Basic payload with default values for indicators
-    // In a real app, these would come from a Triage form
+  const handleJoinQueue = async (currentUser = user) => {
     const payload = {
+      nss: currentUser?.nss || null,
       preventiva: 0,
       mas_de_un_sintoma: 1,
       adulto: 1,
       comorbilidad: 0,
       tiene_laboratorio: 0,
-      es_seguimiento: 0
+      es_seguimiento: 0,
     };
 
     try {
       const res = await fetch(`${PATH}/atencion/registrar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
+
+      if (res.status === 409) {
+        // Ya tiene turno — obtener estado actual y mostrar QueuePage
+        const estado = await fetch(`${PATH}/atencion/estado/${currentUser?.nss}`);
+        if (estado.ok) {
+          const data = await estado.json();
+          (window as any).activeQueueId = data.id;
+          setActiveQueueAppt({
+            id: data.id,
+            score: data.score,
+            horaArribo: data.hora_sugerida_arribo,
+            duracionMinutos: data.duracion_estimada_minutos,
+            sumaMinutos: data.suma_tiempos_anteriores_min,
+          });
+          setPage('queue');
+        }
+        return;
+      }
 
       if (res.ok) {
         const data = await res.json();
-        const now = new Date();
-        const range = `${now.getHours()}:00 - ${now.getHours()}:30`;
         (window as any).activeQueueId = data.id;
-        setActiveQueueAppt({ id: data.id, range, score: data.score });
+        setActiveQueueAppt({
+          id: data.id,
+          score: data.score,
+          horaArribo: data.hora_sugerida_arribo,
+          duracionMinutos: data.duracion_estimada_minutos,
+          sumaMinutos: data.suma_tiempos_anteriores_min,
+        });
         setPage('queue');
       } else {
-        alert("Error al unirse a la fila");
+        alert('Error al unirse a la fila');
       }
     } catch (e) {
-      console.error("Queue error", e);
-      alert("Error de conexión con el servidor");
+      console.error('Queue error', e);
+      alert('Error de conexión con el servidor');
     }
   };
 
@@ -104,10 +142,12 @@ const App: React.FC = () => {
     />
   );
   else if (page === 'queue') content = (
-    <QueuePage 
-      user={user} 
-      onLeave={() => setIsConfirmOpen(true)} 
-      timeRange={activeQueueAppt?.range || 'Procesando...'} 
+    <QueuePage
+      user={user}
+      onLeave={() => setIsConfirmOpen(true)}
+      horaArribo={activeQueueAppt?.horaArribo}
+      duracionMinutos={activeQueueAppt?.duracionMinutos}
+      sumaMinutos={activeQueueAppt?.sumaMinutos}
     />
   );
   else content = <HomePage user={user} setPage={setPage} activeAppt={activeQueueAppt} onLeaveQueue={() => setIsConfirmOpen(true)} />;

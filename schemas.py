@@ -33,6 +33,7 @@ class PacienteFormadoCreate(BaseModel):
 
 
 class TurnoCreate(BaseModel):
+    nss:               Optional[str] = Field(default=None, max_length=11)
     preventiva:        int = Field(..., ge=0, le=1)
     mas_de_un_sintoma: int = Field(..., ge=0, le=1)
     adulto:            int = Field(..., ge=0, le=1)

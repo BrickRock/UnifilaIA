@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
 from models import Base
 # TODO: reemplazar con la cadena real cuando la BD esté levantada
@@ -14,6 +14,16 @@ class _Database:
             cls._instance = super().__new__(cls)
             cls._instance._engine = create_engine(DATABASE_URL, echo=True)
             Base.metadata.create_all(cls._instance._engine)
+            with cls._instance._engine.connect() as conn:
+                conn.execute(text(
+                    "ALTER TABLE turno_simplificado "
+                    "ADD COLUMN IF NOT EXISTS duracion_estimada_minutos FLOAT"
+                ))
+                conn.execute(text(
+                    "ALTER TABLE turno_simplificado "
+                    "ADD COLUMN IF NOT EXISTS nss VARCHAR(11)"
+                ))
+                conn.commit()
             cls._instance._session_factory = sessionmaker(bind=cls._instance._engine)
         return cls._instance
 
