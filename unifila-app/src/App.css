@@ -1,0 +1,176 @@
+:root {
+  --primary: #064e3b; /* Emerald 900 (Verde Profundo Profesional) */
+  --primary-hover: #065f46;
+  --secondary: #10b981;
+  --accent: #f0fdf4;
+  --bg-main: #ffffff;
+  --bg-card: #ffffff;
+  --text-main: #064e3b;
+  --text-muted: #4b5563;
+  --border: #f1f5f9;
+  --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+  --input-bg: #f8fafc;
+}
+
+.dark-mode {
+  --primary: #34d399;
+  --primary-hover: #10b981;
+  --bg-main: #0f172a;
+  --bg-card: #1e293b;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --border: #334155;
+  --input-bg: #334155;
+}
+
+* {
+  text-decoration: none !important;
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: var(--bg-main);
+  color: var(--text-main);
+}
+
+.app-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 4rem 3rem;
+  width: 100%;
+}
+
+.card {
+  background: var(--bg-card);
+  padding: 3.5rem;
+  border-radius: 2rem;
+  box-shadow: var(--shadow);
+  margin-bottom: 4rem;
+  border: 1px solid var(--border);
+}
+
+.card h2 {
+  margin-top: 0;
+  margin-bottom: 3rem;
+  font-size: 0.9rem;
+  color: var(--primary);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+}
+
+/* Hero Section "Fila" Theme */
+.hero-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6rem 5rem;
+  background: var(--primary);
+  border-radius: 2.5rem;
+  margin-bottom: 5rem;
+  color: white;
+}
+
+.hero-content h1 { font-size: 4.5rem; margin: 0; font-weight: 900; letter-spacing: -3px; }
+.hero-content p { font-size: 1.5rem; opacity: 0.8; margin: 1.5rem 0 0 0; }
+
+.queue-illustration { display: flex; gap: 1rem; align-items: flex-end; }
+.queue-person {
+  width: 35px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 8px 8px 0 0;
+  animation: grow 3s ease-in-out infinite;
+}
+@keyframes grow { 0%, 100% { height: 50px; } 50% { height: 90px; } }
+
+@keyframes blink {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.98); background-color: var(--accent); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.blink {
+  animation: blink 1.5s infinite ease-in-out;
+  border: 2px solid var(--secondary) !important;
+}
+
+/* Features Row */
+.features-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3rem;
+  margin-bottom: 6rem;
+}
+
+.feature-card {
+  text-align: center;
+  padding: 2.5rem;
+  border-radius: 1.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+}
+
+/* Consultorios - AJUSTADOS SEGÚN SOLICITUD (NO ALARGADOS) */
+.rooms-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 3rem;
+  width: 100%;
+}
+
+.room-card {
+  background: var(--input-bg);
+  padding: 3rem 2rem;
+  border-radius: 2rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 350px; /* Altura controlada para que no se alargue */
+  border: 1px solid var(--border);
+}
+
+.room-card.occupied {
+  background: var(--primary);
+  color: white;
+}
+
+.room-name { font-size: 0.75rem; font-weight: 900; text-transform: uppercase; margin-bottom: 2rem; opacity: 0.6; }
+.occupant-name { font-size: 2rem; font-weight: 950; margin-bottom: 2.5rem; }
+
+/* Forms & Triage */
+.vitals-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; margin-bottom: 3rem; }
+.form-field label { font-size: 0.7rem; font-weight: 900; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.75rem; display: block; }
+input {
+  width: 100%;
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--text-main);
+  border-radius: 1.25rem;
+}
+
+/* Buttons */
+button { padding: 1.25rem 2.5rem; border-radius: 1.25rem; font-weight: 800; cursor: pointer; border: none; }
+.btn-primary { background: var(--primary); color: white; }
+.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
+
+/* Footer */
+.footer { padding: 5rem 3rem; background: var(--bg-card); border-top: 1px solid var(--border); text-align: center; }
+.footer-copy { font-size: 0.8rem; color: var(--text-muted); opacity: 0.6; }
+
+/* Navbar */
+.navbar { background: var(--bg-card); padding: 3rem 4rem; border-bottom: 1px solid var(--border); }
+.navbar-brand { color: var(--primary); font-size: 1.2rem; font-weight: 950; }
+.stat-badge { background: var(--primary); color: white; padding: 0.5rem 1rem; border-radius: 0.75rem; }
+
+/* Theme Toggle */
+.theme-toggle { background: var(--input-bg); border: 1px solid var(--border); color: var(--text-main); padding: 0.75rem; border-radius: 1rem; }
