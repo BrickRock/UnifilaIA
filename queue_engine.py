@@ -1,68 +1,39 @@
 from datetime import datetime, timedelta
+from typing import Optional
 from sqlalchemy.orm import Session
-from models import Turno, TriageLevel, EstadoAtencion, Consultorio, HistorialAtencion
-from sqlalchemy import func
+from sqlalchemy import func, select
+from models import PacienteFormado, EstadoAtencion
+
 
 class QueueEngine:
-    # Tiempos base por Triage (en minutos) - Estrategia Cold Start
-    BASE_TIMES = {
-        1: 5.0,   # Rojo: Atención inmediata (estabilización rápida o pase directo)
-        2: 20.0,  # Naranja
-        3: 30.0,  # Amarillo
-        4: 15.0,  # Verde (consultas rápidas)
-        5: 10.0   # Azul (recetas o temas simples)
-    }
+    MINUTOS_POR_PACIENTE = 15.0
 
     @staticmethod
-    def calculate_priority_score(turno: Turno) -> float:
-        """
-        Calcula el score de prioridad. A menor score, más prioridad.
-        Considera: Triage, Tiempo de espera y penalización por desplazamientos.
-        """
-        ahora = datetime.now()
-        minutos_esperando = (ahora - turno.hora_registro).total_seconds() / 60
-        
-        # El Triage es el factor más fuerte (100, 200, 300...)
-        # Restamos los minutos esperando para que quien lleva más tiempo gane prioridad
-        # Sumamos penalización por desplazamientos previos para evitar el "starvation"
-        score = (turno.triage * 100) - minutos_esperando + (turno.desplazamientos * 15)
-        return score
+    def calculate_priority_score(score: int, hora_llegada: datetime, desplazamientos: int = 0) -> float:
+        minutos_esperando = (datetime.now() - hora_llegada).total_seconds() / 60
+        return (score * 10) - minutos_esperando + (desplazamientos * 15)
 
     @classmethod
-    def get_estimated_wait_time(cls, session: Session, id_consultorio: int) -> float:
-        """
-        Suma los tiempos estimados de todos los pacientes delante en la cola.
-        """
-        # Fase 1: Intentar obtener promedio histórico real de la DB
-        # Si no hay datos (Cold Start), usar BASE_TIMES
-        count = session.query(func.count(HistorialAtencion.id)).scalar()
-        
-        pacientes_esperando = session.query(Turno).filter(
-            Turno.id_consultorio == id_consultorio,
-            Turno.estado == EstadoAtencion.EN_ESPERA
-        ).order_by(Turno.prioridad_ajustada).all()
+    def get_estimated_wait_time(cls, session: Session, id_consultorio: Optional[int] = None) -> float:
+        query = select(func.count(PacienteFormado.id_turno_dia)).where(
+            PacienteFormado.estado_atencion == EstadoAtencion.EN_ESPERA
+        )
+        if id_consultorio is not None:
+            query = query.where(PacienteFormado.id_consultorio == id_consultorio)
 
-        total_wait = 0.0
-        for p in pacientes_esperando:
-            # Por ahora usamos tiempos base, en el futuro llamará al modelo ML
-            total_wait += cls.BASE_TIMES.get(p.triage, 15.0)
-            
-        return total_wait
+        pacientes_en_espera = session.execute(query).scalar() or 0
+        return pacientes_en_espera * cls.MINUTOS_POR_PACIENTE
 
     @staticmethod
-    def check_no_show_ttl(session: Session):
-        """
-        Regla de Ausentismo: TTL de 5 minutos para pacientes LLAMADOS.
-        """
-        limite_tolerancia = datetime.now() - timedelta(minutes=5)
-        
-        pacientes_ausentes = session.query(Turno).filter(
-            Turno.estado == EstadoAtencion.LLAMADO,
-            Turno.hora_llamado < limite_tolerancia
+    def check_no_show_ttl(session: Session) -> int:
+        limite = datetime.now() - timedelta(minutes=5)
+        ausentes = session.scalars(
+            select(PacienteFormado).where(
+                PacienteFormado.estado_atencion == EstadoAtencion.LLAMADO,
+                PacienteFormado.hora_llamado < limite
+            )
         ).all()
-
-        for p in pacientes_ausentes:
-            p.estado = EstadoAtencion.NO_PRESENTADO
-            # Aquí se dispararía un evento de WebSocket para avisar el cambio
-            
+        for p in ausentes:
+            p.estado_atencion = EstadoAtencion.NO_PRESENTADO
         session.commit()
+        return len(ausentes)
